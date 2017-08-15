@@ -1,0 +1,33 @@
+[
+	{
+		"id": 0,
+		"type": "THREAT",
+		"src": "img/bomb.png",
+		"x": [100,350,670,1000],
+		"y": 0,
+		"width": 10,
+		"length": 30,
+		"newSpeed": 0.8,
+		"time": 3
+	},
+
+	{
+		"id": 1,
+		"type": "SPEEDUP",
+		"src": "img/meat.png",
+		"x": [200,300,400,500,600,700,800],
+		"y": 0,
+		"width": 25,
+		"length": 10,
+		"newSpeed": 1.5,
+		"time": 3
+	},
+
+	{
+		"id": 2,
+		"type": "FINISH",
+		"src": "img/goal.png",
+		"x": 15000,
+		"y": 0
+	}
+]
