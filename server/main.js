@@ -1,6 +1,6 @@
-process.on('uncaughtException', function(err) {
+/*process.on('uncaughtException', function(err) {
   console.log('Caught exception: ' + err);
-});
+});*/
 
 var express = require('express');
 var app = express();
@@ -22,8 +22,6 @@ var  dataPlayer = new Array();
 
 var gameStatus = "WAITING";
 
-dataPlayer = [];
-
 
 
 app.use(express.static('public'));
@@ -37,14 +35,28 @@ var connectionId = 0;
 var countDownTime = 5;
 var initX = 0;
 var initY = 0;
+var startTimeGame;
+var allClients
 
 
 io.on('connection', function(socket) {
-  console.log("El socket " + socket.id + " se ha conetado.");
+  
   
   fncConnectionResult(socket);
+
+  console.log("El socket " + socket.playerId + " se ha conetado.");
   fncKeepAlive(socket);
+  fncEvent(socket);
+  fncGoalReached(socket);
   fncGameEnded(socket);
+
+  socket.on('disconnect', function(){
+    
+    console.log("Jugador: " + socket.playerId + " desconectado.");
+    dataPlayer[socket.playerId].playerStatus = 'OFFLINE';
+    console.log(dataPlayer[socket.playerId]);
+
+  })
 
 });
 
@@ -57,6 +69,7 @@ function fncConnectionResult(socket){
   var message;
 
   connectionId = dataPlayer.length;
+  socket.playerId = connectionId;
   
   newPlayer = {
     playerId: connectionId,
@@ -64,8 +77,9 @@ function fncConnectionResult(socket){
     y: initY,
     speed: 1,
     speedTime: 0, 
-    playerStatus: 'Conectado'
+    playerStatus: 'ONLINE'
   };
+
     initX += 50;
 
 
@@ -87,6 +101,8 @@ function fncConnectionResult(socket){
 
           if(currentTime <= 0){
             io.sockets.emit('gameStarted',dataPlayer);
+            startTimeGame = new Date();
+            console.log(startTimeGame);
             gameStatus = "LOCKED";
             clearInterval(timer);
           }
@@ -104,9 +120,9 @@ function fncConnectionResult(socket){
       seconds: currentTime,
       x: newPlayer.x,
       y: newPlayer.y,
-      speed: newPlayer.speed,
+      speedResponse: newPlayer.speed,
       speedTime: newPlayer.speedTime,
-      playerStatus: newPlayer.status,
+      playerStatusResponse: newPlayer.playerStatus,
       objects: obj
     };
 
@@ -131,7 +147,7 @@ function fncKeepAlive(socket){
 
     dataPlayer[index].x = data.x;
     dataPlayer[index].y = data.y;
-    dataPlayer[index].s = data.s;  
+    dataPlayer[index].speed = data.speed;  
 
     socket.broadcast.emit('keepAlive', data);
 
@@ -142,11 +158,12 @@ function fncKeepAlive(socket){
 function fncEvent(socket) {
   
   socket.on('event', function(data){
+  //console.log(data);
   var payload;
 
     if(data.eventType != "JUMP" && data.eventType != "FINISH"){
       
-      dataPlayer[data.playerId].sped = obj[data.eventId].newSpeed;
+      dataPlayer[data.playerId].speed = obj[data.eventId].newSpeed;
       dataPlayer[data.playerId].speedTime = obj[data.eventId].time;
 
     }
@@ -155,29 +172,46 @@ function fncEvent(socket) {
       
       playerId: data.playerId,
       speed: dataPlayer[data.playerId].speed,
-      time: dataPlayer[data.playerId].time,
+      time: dataPlayer[data.playerId].speedTime,
       eventId: data.eventId,
       eventType: data.eventType
 
     }
 
+    console.log(payload);
+    console.log('\n');
     socket.broadcast.emit('event', payload);
 
   });
 }
 
+var endGame = new Array();
 
 function fncGameEnded(socket){
   socket.on('gameEnded',function(){
+    io.sockets.emit('gameEnded',newPlayerEnd);
+    
     gameStatus = "WAITING";
     dataPlayer = [];
     initX = 0;
     console.log("El juego ha finalizado");
+
   });
 }
 
-function fncGoalReached(sockets){
-  socket.on('goalReached', function(){
+
+function fncGoalReached(socket){
+
+  socket.on('goalReached', function(data){
+    
+    newPlayerEnd = {
+      playerId: data.playerId,
+      time: (new Date() - startTimeGame)
+    };
+
+    console.log("Goal reached ID: " + newPlayerEnd.playerId + " time: " + newPlayerEnd.time);
+
+    endGame.push(newPlayerEnd);
 
   });
 }
