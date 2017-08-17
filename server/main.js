@@ -1,10 +1,10 @@
-/*process.on('uncaughtException', function(err) {
+process.on('uncaughtException', function(err) {
   console.log('Caught exception: ' + err);
-});*/
+});
 
 var express = require('express');
 var app = express();
-var serverIP = "192.168.1.18";
+var serverIP = "192.168.1.101";
 var server = require('http').Server(app);
 var currentTime;
 
@@ -43,26 +43,22 @@ io.on('connection', function(socket) {
   
   
   fncConnectionResult(socket);
-
+  fncUpdateNickName(socket);
   console.log("El socket " + socket.playerId + " se ha conetado.");
   fncKeepAlive(socket);
   fncEvent(socket);
   fncGoalReached(socket);
-  fncGameEnded(socket);
+  
 
   socket.on('disconnect', function(){
     
-    console.log("Jugador: " + socket.playerId + " desconectado.");
+    /*console.log("Jugador: " + socket.playerId + " desconectado.");
     dataPlayer[socket.playerId].playerStatus = 'OFFLINE';
-    console.log(dataPlayer[socket.playerId]);
+    console.log(dataPlayer[socket.playerId]);*/
 
   })
 
 });
-
-io.on('',function(socket){
-  // body...
-})
 
 function fncConnectionResult(socket){
   var payload;
@@ -73,6 +69,7 @@ function fncConnectionResult(socket){
   
   newPlayer = {
     playerId: connectionId,
+    nickName: "",
     x: initX,
     y: initY,
     speed: 1,
@@ -80,7 +77,7 @@ function fncConnectionResult(socket){
     playerStatus: 'ONLINE'
   };
 
-    initX += 50;
+    initX += 20;
 
 
   if(gameStatus == "WAITING" || gameStatus == "COUNTDOWN"){
@@ -140,6 +137,16 @@ function fncConnectionResult(socket){
   }
 }
 
+function fncUpdateNickName(socket){
+  socket.on('registerUser', function(data){
+  socket.nickName = data.nickName;
+
+  var index = data.playerId;
+   dataPlayer[index].nickName = data.nickName;
+
+  });
+}
+
 function fncKeepAlive(socket){
 
   socket.on('keepAlive', function(data){
@@ -178,8 +185,8 @@ function fncEvent(socket) {
 
     }
 
-    console.log(payload);
-    console.log('\n');
+    /*console.log(payload);
+    console.log('\n');*/
     socket.broadcast.emit('event', payload);
 
   });
@@ -187,16 +194,14 @@ function fncEvent(socket) {
 
 var endGame = new Array();
 
-function fncGameEnded(socket){
-  socket.on('gameEnded',function(){
-    io.sockets.emit('gameEnded',newPlayerEnd);
+function fncGameEnded(){
+    io.sockets.emit('gameEnded',endGame);
     
     gameStatus = "WAITING";
     dataPlayer = [];
+    endGame = [];
     initX = 0;
     console.log("El juego ha finalizado");
-
-  });
 }
 
 
@@ -205,37 +210,26 @@ function fncGoalReached(socket){
   socket.on('goalReached', function(data){
     
     newPlayerEnd = {
-      playerId: data.playerId,
+      nickName: dataPlayer[data.playerId].nickName,
       time: (new Date() - startTimeGame)
     };
 
-    console.log("Goal reached ID: " + newPlayerEnd.playerId + " time: " + newPlayerEnd.time);
+    console.log("Goal reached ID: " + newPlayerEnd.nickName + " time: " + newPlayerEnd.time);
 
     endGame.push(newPlayerEnd);
 
-  });
-}
-  
+    //console.log("EG: " + endGame.length + " y DP: " + dataPlayer.length);
 
+    if(endGame.length == dataPlayer.length){
+      
+      fncGameEnded();
 
+      //console.log("Si entró acá");
 
-/*socket.on('updateCoordinates', function(data){
-    
-    var index = dataPlayer.indexOf(data.playerId);
-
-    if(index >= 0){
-      dataPlayer[index].x = data.x;
-      dataPlayer[index].y = data.y;
     }
 
-    console.log(index);
-    console.log(dataPlayer[0].playerId);
-    //dataPlayer.push(data);
-
-    io.sockets.emit('sendDataPlayer', dataPlayer)
-
-});*/
-
+  });
+}
 
 server.listen(serverPort, serverIP, function() {
   console.log("Servidor corriendo en http://" + serverIP + ":" + serverPort);

@@ -1,4 +1,4 @@
-var serverIP = "192.168.1.18";
+var serverIP = "192.168.1.101";
 var serverPort = 8080;
 
 var socket = io.connect('http://' + serverIP + ":" + serverPort);
